@@ -1,0 +1,107 @@
+name: Build and publish Arch repository
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '23 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: arch-repo-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    outputs:
+      publish: ${{ steps.decide.outputs.build }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Resolve official signed stable desktop release
+        if: github.event_name != 'pull_request'
+        run: python scripts/update.py
+      - name: Decide whether a build is needed
+        id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          # Only scheduled no-op runs are skipped. Manual runs always rebuild.
+          build=true
+          if [[ "$EVENT_NAME" == schedule ]] && git diff --quiet -- PKGBUILD upstream.json; then
+            package=$(bash -c 'source PKGBUILD; printf "%s-%s-%s-x86_64.pkg.tar.zst" "$pkgname" "$pkgver" "$pkgrel"')
+            if gh release view arch-repo --json assets --jq '.assets[].name' > /tmp/assets; then
+              build=false
+              for asset in "$package" "$package.ready" codex-local.db codex-local.db.tar.gz codex-local.files codex-local.files.tar.gz PKGBUILD .SRCINFO upstream.json SHA256SUMS; do
+                if ! grep -Fxq "$asset" /tmp/assets; then build=true; fi
+              done
+            fi
+          fi
+          echo "build=$build" >> "$GITHUB_OUTPUT"
+      - name: Lint workflows and test update validation
+        if: steps.decide.outputs.build == 'true'
+        run: |
+          docker run --rm -v "$PWD:/repo:ro" -w /repo rhysd/actionlint:latest -color
+          docker run --rm --entrypoint shellcheck -v "$PWD:/repo:ro" -w /repo rhysd/actionlint:latest scripts/*.sh
+          for script in PKGBUILD scripts/*.sh; do bash -n "$script"; done
+          python -m unittest discover -s tests -v
+      - name: Build with official Arch Docker image
+        if: steps.decide.outputs.build == 'true'
+        run: docker run --rm -v "$PWD:/work" -w /work archlinux:base-devel bash scripts/build.sh
+      - name: Install repository and smoke test in a fresh Arch container
+        if: steps.decide.outputs.build == 'true'
+        run: docker run --rm -v "$PWD:/work:ro" -w /work archlinux:base-devel bash scripts/verify.sh
+      - name: Assemble artifacts and reproducible packaging inputs
+        if: steps.decide.outputs.build == 'true'
+        run: |
+          sudo chown -R "$(id -u):$(id -g)" out .SRCINFO
+          cp PKGBUILD .SRCINFO upstream.json out/
+      - uses: actions/upload-artifact@v7
+        if: steps.decide.outputs.build == 'true'
+        with:
+          name: arch-repository
+          path: out/
+          include-hidden-files: true
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+
+  publish:
+    if: >-
+      needs.build.outputs.publish == 'true' &&
+      github.event_name != 'pull_request' &&
+      github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: arch-repository
+          path: out
+      - name: Publish packages first, repository database last
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: bash scripts/publish.sh
+      - name: Commit verified upstream metadata
+        run: |
+          cp out/PKGBUILD out/.SRCINFO out/upstream.json .
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add PKGBUILD .SRCINFO upstream.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'chore: update official desktop package'
+            git push origin HEAD:main
+          fi
