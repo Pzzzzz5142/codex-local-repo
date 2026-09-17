@@ -39,38 +39,18 @@ git push -u origin main
 发布后的自动提交会失败，需要允许该机器人更新这三个包元数据文件，或自行改为 PR 流程。
 GitHub 定时任务只在默认分支运行；公共仓库长期无活动可能被 GitHub 暂停定时任务。
 
-## 私有仓库安装
+## 用 yay / pacman 安装
 
-本项目托管于私有仓库 `Pzzzzz5142/codex-local-repo`。私有 Release 需要认证，
-不能直接把其网页下载 URL 当作普通 pacman HTTP 源，也不要把访问令牌写入 pacman.conf。
-先用已登录的 GitHub CLI 将产物同步到本地目录：
+本项目的公开仓库为 [Pzzzzz5142/codex-local-repo](https://github.com/Pzzzzz5142/codex-local-repo)。
+GitHub Actions 自动构建并把包、数据库发布到固定的 `arch-repo` Release。
+本机无需 `gh` 登录，也无需手动下载或同步文件。
 
-```bash
-mkdir -p "$HOME/.local/share/codex-local-repo"
-gh release download arch-repo --repo Pzzzzz5142/codex-local-repo \
-  --pattern '*.pkg.tar.zst' --pattern 'codex-local.*' \
-  --dir "$HOME/.local/share/codex-local-repo" --clobber
-```
-
-在 `/etc/pacman.conf` 添加下列配置，将路径替换为自己的绝对路径（这里不展开 `$HOME`）：
+首次 CI 发布成功后，在 `/etc/pacman.conf` 末尾添加一次：
 
 ```ini
 [codex-local]
 SigLevel = Optional
-Server = file:///home/YOUR_USER/.local/share/codex-local-repo
-```
-
-之后执行 `yay -Syu chatgpt-desktop-bin`。后续更新先重新同步 Release，再运行 `yay -Syu`。
-GitHub 上的检查和发布自动执行；本机同步不会自动安装系统升级。
-
-## 公共仓库的直接 HTTP 安装方式
-
-仅在仓库改为公开后，首次 CI 成功后，在 `/etc/pacman.conf` 末尾添加（替换 `OWNER` 和仓库名）：
-
-```ini
-[codex-local]
-SigLevel = Optional
-Server = https://github.com/OWNER/codex-local-repo/releases/download/arch-repo
+Server = https://github.com/Pzzzzz5142/codex-local-repo/releases/download/arch-repo
 ```
 
 ```bash
