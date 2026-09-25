@@ -1,6 +1,6 @@
 pkgbase = chatgpt-desktop-bin
 	pkgdesc = Official ChatGPT desktop application with Codex, repackaged for Arch Linux
-	pkgver = 26.917.71314
+	pkgver = 26.924.20706
 	pkgrel = 1
 	url = https://learn.chatgpt.com/docs/linux/linux-app
 	arch = x86_64
@@ -42,12 +42,12 @@ pkgbase = chatgpt-desktop-bin
 	optdepends = gnome-keyring: secret storage
 	optdepends = libpulse: PulseAudio support
 	optdepends = xorg-xwayland: run under Wayland
-	provides = chatgpt=26.917.71314
+	provides = chatgpt=26.924.20706
 	conflicts = chatgpt
 	conflicts = chatgpt-bin
 	options = !strip
 	options = !debug
-	source = chatgpt_26.917.71314_amd64.deb::https://persistent.oaistatic.com/codex-app-prod/linux/deb/pool/main/c/chatgpt/chatgpt_26.917.71314_amd64.deb
-	sha256sums = 851ec28b65bde2ff1da9f37dcdf5b6e20a915c7568f8b2ce993c00428f018ae5
+	source = chatgpt_26.924.20706_amd64.deb::https://persistent.oaistatic.com/codex-app-prod/linux/deb/pool/main/c/chatgpt/chatgpt_26.924.20706_amd64.deb
+	sha256sums = 760a0a98dcc05a40cbd8a36fec1dd7b32733e6a1f2a5285386ae7faf9a6ab033
 
 pkgname = chatgpt-desktop-bin
