@@ -1,6 +1,6 @@
 # Repackages OpenAI's official Linux desktop distribution (includes Codex).
 pkgname=chatgpt-desktop-bin
-pkgver=26.924.20706
+pkgver=26.924.22138
 pkgrel=1
 pkgdesc='Official ChatGPT desktop application with Codex, repackaged for Arch Linux'
 arch=('x86_64')
@@ -16,8 +16,8 @@ optdepends=('git: Git integration' 'gnome-keyring: secret storage'
 provides=("chatgpt=$pkgver")
 conflicts=('chatgpt' 'chatgpt-bin')
 options=('!strip' '!debug')
-source=('chatgpt_26.924.20706_amd64.deb::https://persistent.oaistatic.com/codex-app-prod/linux/deb/pool/main/c/chatgpt/chatgpt_26.924.20706_amd64.deb')
-sha256sums=('760a0a98dcc05a40cbd8a36fec1dd7b32733e6a1f2a5285386ae7faf9a6ab033')
+source=('chatgpt_26.924.22138_amd64.deb::https://persistent.oaistatic.com/codex-app-prod/linux/deb/pool/main/c/chatgpt/chatgpt_26.924.22138_amd64.deb')
+sha256sums=('ce3bb1aa82ccdfe3037ada2fd8d187796ea4a0d5ed031d0e4ec8adce8b7014e7')
 
 package() {
     # Extract only the application payload. Debian maintainer scripts are not run.
